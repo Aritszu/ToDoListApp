@@ -51,13 +51,29 @@ class MainActivity : AppCompatActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.adapterPosition
-                val task = taskAdapter.getTaskAtPosition(position)
-                dbHelper.deleteTask(task.id)
-                prepareData() // Refresh data after deleting a task
+                // Check if the item is not a Header or Spacer before attempting to delete
+                when (val item = taskAdapter.getItems()[position]) {
+                    is Task -> {
+                        dbHelper.deleteTask(item.id)
+                        prepareData() // Refresh data after deleting a task
+                    }
+                    else -> {
+                        taskAdapter.notifyItemChanged(position)
+                    }
+                }
+            }
+
+            override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+                // Disable swipe for Header and Spacer
+                if (viewHolder.itemViewType == TaskAdapter.VIEW_TYPE_HEADER || viewHolder.itemViewType == TaskAdapter.VIEW_TYPE_SPACER) {
+                    return 0
+                }
+                return super.getSwipeDirs(recyclerView, viewHolder)
             }
         })
         itemTouchHelper.attachToRecyclerView(recyclerView)
     }
+
 
 
     private fun prepareData() {
@@ -66,21 +82,29 @@ class MainActivity : AppCompatActivity() {
 
         val items = mutableListOf<Any>().apply {
             if (todayTasks.isNotEmpty()) {
-                add(Header("Today"))
+                add(Header("today"))
                 addAll(todayTasks)
+                add(Spacer()) // Add a spacer after today's tasks
             } else {
-                add(Header("No Tasks for Today"))
+                add(Header("no tasks for today"))
             }
+
+            // Add a spacer only if there are tasks for today and tomorrow
+            if (todayTasks.isNotEmpty() && tomorrowTasks.isNotEmpty()) {
+                add(Spacer(height = 50)) // Adjust height as you see fit
+            }
+
             if (tomorrowTasks.isNotEmpty()) {
-                add(Header("Tomorrow"))
+                add(Header("tomorrow"))
                 addAll(tomorrowTasks)
             } else {
-                add(Header("No Tasks for Tomorrow"))
+                add(Header("no tasks for tomorrow"))
             }
         }
 
         taskAdapter.updateItems(items)
     }
+
 
     private fun showAddTaskDialog(task: Task? = null) {
         val layout = LinearLayout(this).apply {
@@ -139,4 +163,5 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+    data class Spacer(val height: Int = 150)
 

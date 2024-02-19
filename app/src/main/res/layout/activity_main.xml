@@ -4,18 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
-
-    <TextView
-        android:id="@+id/tvTodayHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Today"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-
-    />
+    tools:context=".MainActivity"
+    android:background="@color/bg">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewTasks"
@@ -27,7 +17,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0"
-        tools:listitem="@layout/item_task" />
+        tools:listitem="@layout/item_task"
+        android:padding="16dp"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddTask"
@@ -36,8 +27,13 @@
         android:layout_margin="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@android:drawable/ic_input_add"
+        app:srcCompat="@drawable/component_5__1"
+        app:maxImageSize="80dp"
+        app:tint="@null"
+        app:backgroundTint="@android:color/transparent"
         android:contentDescription="@string/add_new_task" />
+
+
 
 
 

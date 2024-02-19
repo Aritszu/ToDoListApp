@@ -17,12 +17,11 @@ data class Header(val title: String)
 class TaskAdapter(private var items: List<Any>, private val itemClickListener: (Task) -> Unit) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
-        private const val VIEW_TYPE_HEADER = 0
-        private const val VIEW_TYPE_TASK = 1
-        private const val VIEW_TYPE_PLACEHOLDER = 2
-        private const val COMPLETED_COLOR = Color.GRAY
+        const val VIEW_TYPE_HEADER = 0
+        const val VIEW_TYPE_TASK = 1
+        const val VIEW_TYPE_PLACEHOLDER = 2
+        const val VIEW_TYPE_SPACER = 3
         private const val NOT_COMPLETED_COLOR = Color.BLACK
-        private const val COMPLETED_TEXT_COLOR = Color.GREEN
     }
 
     fun getItems(): List<Any> {
@@ -82,23 +81,40 @@ class TaskAdapter(private var items: List<Any>, private val itemClickListener: (
                 val taskView = LayoutInflater.from(parent.context).inflate(R.layout.item_task, parent, false)
                 TaskViewHolder(taskView)
             }
+            VIEW_TYPE_SPACER -> {
+                val spacerView = View(parent.context).apply {
+                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 600)
+                }
+                SpacerViewHolder(spacerView)
+            }
             else -> throw IllegalArgumentException("Invalid view type")
         }
     }
+    class SpacerViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        fun bind(spacer: Spacer) {
+            itemView.layoutParams = itemView.layoutParams.apply {
+                height = spacer.height
+            }
+        }
+    }
+
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = items[position]) {
             is Task -> (holder as TaskViewHolder).bind(item, itemClickListener, ::getRemainingTime)
             is Header -> (holder as HeaderViewHolder).bind(item)
+            is Spacer -> (holder as SpacerViewHolder).bind(item)
         }
     }
+
 
     override fun getItemCount(): Int = items.size
 
     override fun getItemViewType(position: Int): Int {
         return when (val item = items[position]) {
             is Header -> VIEW_TYPE_HEADER
-            is Task -> if (item.isPlaceholder) VIEW_TYPE_PLACEHOLDER else VIEW_TYPE_TASK
+            is Task -> VIEW_TYPE_TASK
+            is Spacer -> VIEW_TYPE_SPACER
             else -> throw IllegalArgumentException("Unknown item type at position $position")
         }
     }
