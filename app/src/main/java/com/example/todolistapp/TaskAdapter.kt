@@ -8,11 +8,11 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import java.util.Date
+import java.text.SimpleDateFormat
 import androidx.core.content.ContextCompat
 import java.util.Locale
+import java.util.Calendar
 
-data class Header(val title: String)
 
 class TaskAdapter(private var items: List<Any>, private val itemClickListener: (Task) -> Unit) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -24,10 +24,7 @@ class TaskAdapter(private var items: List<Any>, private val itemClickListener: (
         private const val NOT_COMPLETED_COLOR = Color.BLACK
     }
 
-    fun getItems(): List<Any> {
-        return items
-    }
-
+    fun getItems(): List<Any> = items
 
     fun updateItems(newItems: List<Any>) {
         items = newItems
@@ -38,106 +35,90 @@ class TaskAdapter(private var items: List<Any>, private val itemClickListener: (
         val taskTitleTextView: TextView = view.findViewById(R.id.task_title)
         val taskStatusImageView: ImageView = view.findViewById(R.id.task_status)
         val taskDueDateTextView: TextView = view.findViewById(R.id.task_due_date)
-        private val context = view.context // Context to access resources
+        private val context = view.context
 
-        fun bind(task: Task, itemClickListener: (Task) -> Unit, getRemainingTime: (Date) -> String) {
+        fun bind(task: Task, itemClickListener: (Task) -> Unit) {
             taskTitleTextView.text = task.title
-
             if (task.isCompleted) {
-                taskTitleTextView.paintFlags = taskTitleTextView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                taskTitleTextView.paintFlags =
+                    taskTitleTextView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
                 taskTitleTextView.setTextColor(ContextCompat.getColor(context, R.color.gray))
                 taskStatusImageView.setImageResource(R.drawable.component_6__1)
                 taskDueDateTextView.text = "Completed"
                 taskDueDateTextView.setTextColor(ContextCompat.getColor(context, R.color.green))
             } else {
-                taskTitleTextView.paintFlags = taskTitleTextView.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+                taskTitleTextView.paintFlags =
+                    taskTitleTextView.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
                 taskTitleTextView.setTextColor(NOT_COMPLETED_COLOR)
                 taskStatusImageView.setImageResource(R.drawable.rectangle_3)
-                taskDueDateTextView.text = getRemainingTime(task.dueDate)
                 taskDueDateTextView.setTextColor(NOT_COMPLETED_COLOR)
+
+                // Determine if the task is currently due
+                val currentTime = Calendar.getInstance().time
+                val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                val dueTime = timeFormat.format(task.dueDate)
+                val nowTime = timeFormat.format(currentTime)
+
+                if (dueTime == nowTime) {
+                    taskDueDateTextView.text = "Currently"
+                    taskDueDateTextView.setTextColor(
+                        ContextCompat.getColor(
+                            context,
+                            R.color.blue
+                        )
+                    )
+                } else {
+                    val timeText = "At $dueTime"
+                    taskDueDateTextView.text = timeText
+                    taskDueDateTextView.setTextColor(NOT_COMPLETED_COLOR)
+                }
             }
 
-            itemView.setOnClickListener {
-                itemClickListener.invoke(task)
-            }
+            itemView.setOnClickListener { itemClickListener(task) }
         }
     }
-
     class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val headerTitleTextView: TextView = view.findViewById(R.id.header_title)
+        val headerDateInfoTextView: TextView = view.findViewById(R.id.header_date_info)
 
-        fun bind(header: Header) {
+        fun bind(header: TaskHeader) {
             headerTitleTextView.text = header.title
+            headerDateInfoTextView.text = header.dateInfo
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        return when (viewType) {
-            VIEW_TYPE_HEADER -> {
-                val headerView = LayoutInflater.from(parent.context).inflate(R.layout.item_header, parent, false)
-                HeaderViewHolder(headerView)
-            }
-            VIEW_TYPE_TASK, VIEW_TYPE_PLACEHOLDER -> {
-                val taskView = LayoutInflater.from(parent.context).inflate(R.layout.item_task, parent, false)
-                TaskViewHolder(taskView)
-            }
-            VIEW_TYPE_SPACER -> {
-                val spacerView = View(parent.context).apply {
-                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 600)
-                }
-                SpacerViewHolder(spacerView)
-            }
-            else -> throw IllegalArgumentException("Invalid view type")
-        }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder = when (viewType) {
+        VIEW_TYPE_HEADER -> HeaderViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_header, parent, false))
+        VIEW_TYPE_TASK, VIEW_TYPE_PLACEHOLDER -> TaskViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_task, parent, false))
+        VIEW_TYPE_SPACER -> SpacerViewHolder(View(parent.context).apply {
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 50)
+        })
+        else -> throw IllegalArgumentException("Invalid view type")
     }
+
     class SpacerViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         fun bind(spacer: Spacer) {
-            itemView.layoutParams = itemView.layoutParams.apply {
-                height = spacer.height
-            }
+            itemView.layoutParams.height = spacer.height
         }
     }
 
-
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val item = items[position]) {
-            is Task -> (holder as TaskViewHolder).bind(item, itemClickListener, ::getRemainingTime)
-            is Header -> (holder as HeaderViewHolder).bind(item)
-            is Spacer -> (holder as SpacerViewHolder).bind(item)
-        }
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) = when (val item = items[position]) {
+        is Task -> (holder as TaskViewHolder).bind(item, itemClickListener)
+        is TaskHeader -> (holder as HeaderViewHolder).bind(item)
+        is Spacer -> (holder as SpacerViewHolder).bind(item)
+        else -> throw IllegalArgumentException("Unknown item type at position $position")
     }
-
 
     override fun getItemCount(): Int = items.size
 
-    override fun getItemViewType(position: Int): Int {
-        return when (val item = items[position]) {
-            is Header -> VIEW_TYPE_HEADER
-            is Task -> VIEW_TYPE_TASK
-            is Spacer -> VIEW_TYPE_SPACER
-            else -> throw IllegalArgumentException("Unknown item type at position $position")
-        }
-    }
-
-    // Moved out of the companion object to be a member function
-    private fun getRemainingTime(dueDate: Date): String {
-        val currentTime = System.currentTimeMillis()
-        val diff = dueDate.time - currentTime
-        val hours = diff / (1000 * 60 * 60) % 24
-        val minutes = diff / (1000 * 60) % 60
-        return String.format(Locale.getDefault(), "%02dhrs %02dmins", hours, minutes)
-    }
-
-    // Method to get a task based on position for use in MainActivity
-    fun getTaskAtPosition(position: Int): Task {
-        val item = items[position]
-        if (item is Task) {
-            return item
-        } else {
-            throw IllegalArgumentException("Item at position $position is not a Task.")
-        }
+    override fun getItemViewType(position: Int): Int = when (items[position]) {
+        is TaskHeader -> VIEW_TYPE_HEADER
+        is Task -> VIEW_TYPE_TASK
+        is Spacer -> VIEW_TYPE_SPACER
+        else -> throw IllegalArgumentException("Unknown item type at position $position")
     }
 }
+
 
 
 

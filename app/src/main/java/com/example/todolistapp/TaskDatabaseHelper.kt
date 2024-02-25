@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.Locale
+import java.util.Calendar
 
 class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
@@ -66,15 +68,23 @@ class TaskDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_
         return tasks
     }
 
-    fun getTodayTasks(): List<Task> {
-        val calendar = Calendar.getInstance()
-        return getTasksForDate(calendar.time)
+    fun getTodayTasks(): List<Any> {
+        val calendarToday = Calendar.getInstance()
+        val tasks = getTasksForDate(calendarToday.time) //
+        val dateFormat = SimpleDateFormat("MMMM dd, yyyy | EEEE", Locale.getDefault())
+        val todayDate = dateFormat.format(calendarToday.time) // Today's date in the required format
+        val header = TaskHeader("today", todayDate)
+        return listOf(header) + tasks // Combine header and tasks into one list
     }
 
-    fun getTomorrowTasks(): List<Task> {
-        val calendar = Calendar.getInstance()
-        calendar.add(Calendar.DAY_OF_YEAR, 1)
-        return getTasksForDate(calendar.time)
+    fun getTomorrowTasks(): List<Any> {
+        val calendarTomorrow = Calendar.getInstance()
+        calendarTomorrow.add(Calendar.DAY_OF_YEAR, 1) // Tomorrow's date
+        val tasks = getTasksForDate(calendarTomorrow.time)
+        val dateFormat = SimpleDateFormat("MMMM dd, yyyy | EEEE", Locale.getDefault())
+        val tomorrowDate = dateFormat.format(calendarTomorrow.time)
+        val header = TaskHeader("tomorrow", tomorrowDate)
+        return listOf(header) + tasks
     }
 
     fun updateTask(task: Task): Int {

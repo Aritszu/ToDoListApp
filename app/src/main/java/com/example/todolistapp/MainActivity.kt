@@ -1,9 +1,11 @@
 package com.example.todolistapp
 
+import android.app.TimePickerDialog
 import android.os.Bundle
 import android.widget.DatePicker
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.TimePicker
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -11,6 +13,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.util.*
+
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -77,28 +81,21 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun prepareData() {
-        val todayTasks = dbHelper.getTodayTasks() // Fetch today's tasks
-        val tomorrowTasks = dbHelper.getTomorrowTasks() // Fetch tomorrow's tasks
+        val todayTasks = dbHelper.getTodayTasks() // Includes "today" header and tasks
+        val tomorrowTasks = dbHelper.getTomorrowTasks() // Includes "tomorrow" header and tasks
 
         val items = mutableListOf<Any>().apply {
-            if (todayTasks.isNotEmpty()) {
-                add(Header("today"))
+            if (todayTasks.size > 1) { // Check if there are tasks besides the header
                 addAll(todayTasks)
-                add(Spacer()) // Add a spacer after today's tasks
             } else {
-                add(Header("no tasks for today"))
+                add(TaskHeader("today", "No tasks for today"))
             }
+            add(Spacer(height = 50)) // Add spacer between sections regardless
 
-            // Add a spacer only if there are tasks for today and tomorrow
-            if (todayTasks.isNotEmpty() && tomorrowTasks.isNotEmpty()) {
-                add(Spacer(height = 50)) // Adjust height as you see fit
-            }
-
-            if (tomorrowTasks.isNotEmpty()) {
-                add(Header("tomorrow"))
+            if (tomorrowTasks.size > 1) { // Check if there are tasks besides the header
                 addAll(tomorrowTasks)
             } else {
-                add(Header("no tasks for tomorrow"))
+                add(TaskHeader("tomorrow", "No tasks for tomorrow"))
             }
         }
 
@@ -125,38 +122,50 @@ class MainActivity : AppCompatActivity() {
         layout.addView(descriptionEditText)
 
         val datePicker = DatePicker(this)
-        if (task != null) {
-            val calendar = Calendar.getInstance().apply { time = task.dueDate }
-            datePicker.updateDate(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH))
-        }
         layout.addView(datePicker)
+
+        val calendar = Calendar.getInstance()
+        task?.let {
+            calendar.time = it.dueDate
+        }
+        datePicker.init(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH), null)
 
         AlertDialog.Builder(this)
             .setTitle(if (task == null) "Add New Task" else "Edit Task")
             .setView(layout)
-            .setPositiveButton("Save") { _, _ ->
-                val title = titleEditText.text.toString()
-                val description = descriptionEditText.text.toString()
-                val calendar = Calendar.getInstance().apply {
-                    set(datePicker.year, datePicker.month, datePicker.dayOfMonth)
+            .setPositiveButton("Next") { dialog, _ ->
+                val year = datePicker.year
+                val month = datePicker.month
+                val day = datePicker.dayOfMonth
+
+                val timeSetListener = TimePickerDialog.OnTimeSetListener { _: TimePicker, hourOfDay: Int, minute: Int ->
+                    calendar.set(Calendar.YEAR, year)
+                    calendar.set(Calendar.MONTH, month)
+                    calendar.set(Calendar.DAY_OF_MONTH, day)
+                    calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                    calendar.set(Calendar.MINUTE, minute)
+
+                    val newTask = task?.copy(
+                        title = titleEditText.text.toString(),
+                        description = descriptionEditText.text.toString(),
+                        dueDate = calendar.time
+                    ) ?: Task(
+                        id = 0,
+                        title = titleEditText.text.toString(),
+                        description = descriptionEditText.text.toString(),
+                        dueDate = calendar.time
+                    )
+
+                    if (task == null) {
+                        dbHelper.addTask(newTask)
+                    } else {
+                        dbHelper.updateTask(newTask)
+                    }
+                    prepareData()
                 }
-                val dueDate = calendar.time
-                val newTask = task?.copy(
-                    title = title,
-                    description = description,
-                    dueDate = dueDate
-                ) ?: Task(
-                    id = 0,
-                    title = title,
-                    description = description,
-                    dueDate = dueDate
-                )
-                if (task == null) {
-                    dbHelper.addTask(newTask)
-                } else {
-                    dbHelper.updateTask(newTask)
-                }
-                prepareData() // Refresh data after adding/editing a task
+
+                val timePickerDialog = TimePickerDialog(this, timeSetListener, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), false)
+                timePickerDialog.show()
             }
             .setNegativeButton("Cancel", null)
             .show()

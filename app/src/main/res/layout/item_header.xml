@@ -17,6 +17,17 @@
         android:paddingBottom="16dp"
         android:paddingTop="8dp" />
 
+    <TextView
+        android:id="@+id/header_date_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?attr/textAppearanceListItem"
+        android:paddingTop="4dp"
+        android:textColor="@android:color/white"
+        android:text="Date Info" />
+
+
+
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/tasks_recycler_view"
