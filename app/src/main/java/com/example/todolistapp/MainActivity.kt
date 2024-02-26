@@ -13,7 +13,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.util.*
-
+import android.os.Handler
+import android.os.Looper
 
 
 class MainActivity : AppCompatActivity() {
@@ -22,6 +23,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var addTaskButton: FloatingActionButton
     private lateinit var taskAdapter: TaskAdapter
+    private val handler = Handler(Looper.getMainLooper())
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,15 +37,34 @@ class MainActivity : AppCompatActivity() {
         addTaskButton = findViewById(R.id.fabAddTask)
         addTaskButton.setOnClickListener { showAddTaskDialog() }
 
-        taskAdapter = TaskAdapter(arrayListOf()) { task ->
-            handleTaskClick(task)
-        }
+        taskAdapter = TaskAdapter(arrayListOf()) { task -> handleTaskClick(task) }
         recyclerView.adapter = taskAdapter
 
         setupSwipeToDelete()
         prepareData() // Initial data load
     }
 
+    private val updateTaskStatusRunnable = object : Runnable {
+        override fun run() {
+            updateTasksStatus()  // Update the display of tasks
+            handler?.postDelayed(this, 5000)  // Reschedule the runnable every 5 seconds
+        }
+    }
+
+
+    private fun updateTasksStatus() {
+        taskAdapter.updateTaskDisplay()  // Ask the adapter to update the display of tasks
+    }
+
+    override fun onStart() {
+        super.onStart()
+        handler?.post(updateTaskStatusRunnable)  // Start the updates when activity starts
+    }
+
+    override fun onStop() {
+        super.onStop()
+        handler?.removeCallbacks(updateTaskStatusRunnable)  // Stop the updates when activity stops
+    }
     private fun handleTaskClick(task: Task) {
         val updatedTask = task.copy(isCompleted = !task.isCompleted)
         dbHelper.updateTask(updatedTask)
@@ -133,7 +155,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(if (task == null) "Add New Task" else "Edit Task")
             .setView(layout)
-            .setPositiveButton("Next") { dialog, _ ->
+            .setPositiveButton("Next") { _, _ ->
                 val year = datePicker.year
                 val month = datePicker.month
                 val day = datePicker.dayOfMonth

@@ -14,6 +14,8 @@ import java.util.Locale
 import java.util.Calendar
 
 
+
+
 class TaskAdapter(private var items: List<Any>, private val itemClickListener: (Task) -> Unit) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -39,43 +41,41 @@ class TaskAdapter(private var items: List<Any>, private val itemClickListener: (
 
         fun bind(task: Task, itemClickListener: (Task) -> Unit) {
             taskTitleTextView.text = task.title
+
+            val currentDateTime = Calendar.getInstance().time
+            val isCurrentlyActive = !task.isCompleted && currentDateTime.after(task.dueDate)
+
             if (task.isCompleted) {
-                taskTitleTextView.paintFlags =
-                    taskTitleTextView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                taskTitleTextView.paintFlags = taskTitleTextView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
                 taskTitleTextView.setTextColor(ContextCompat.getColor(context, R.color.gray))
                 taskStatusImageView.setImageResource(R.drawable.component_6__1)
                 taskDueDateTextView.text = "Completed"
                 taskDueDateTextView.setTextColor(ContextCompat.getColor(context, R.color.green))
             } else {
-                taskTitleTextView.paintFlags =
-                    taskTitleTextView.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+                taskTitleTextView.paintFlags = taskTitleTextView.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
                 taskTitleTextView.setTextColor(NOT_COMPLETED_COLOR)
                 taskStatusImageView.setImageResource(R.drawable.rectangle_3)
                 taskDueDateTextView.setTextColor(NOT_COMPLETED_COLOR)
 
-                // Determine if the task is currently due
-                val currentTime = Calendar.getInstance().time
-                val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-                val dueTime = timeFormat.format(task.dueDate)
-                val nowTime = timeFormat.format(currentTime)
+                // Get current time and format it
+                val currentCalendar = Calendar.getInstance()
+                val taskCalendar = Calendar.getInstance().apply { time = task.dueDate }
 
-                if (dueTime == nowTime) {
+                // Check if the current time is past the task's due time
+                if (!task.isCompleted && currentCalendar.after(taskCalendar)) {
                     taskDueDateTextView.text = "Currently"
-                    taskDueDateTextView.setTextColor(
-                        ContextCompat.getColor(
-                            context,
-                            R.color.blue
-                        )
-                    )
+                    taskDueDateTextView.setTextColor(ContextCompat.getColor(context, R.color.blue))
                 } else {
-                    val timeText = "At $dueTime"
+                    val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                    val timeText = "At ${timeFormat.format(task.dueDate)}"
                     taskDueDateTextView.text = timeText
                     taskDueDateTextView.setTextColor(NOT_COMPLETED_COLOR)
                 }
             }
-
+            // Set up click listener for the entire task view
             itemView.setOnClickListener { itemClickListener(task) }
         }
+
     }
     class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val headerTitleTextView: TextView = view.findViewById(R.id.header_title)
@@ -117,7 +117,19 @@ class TaskAdapter(private var items: List<Any>, private val itemClickListener: (
         is Spacer -> VIEW_TYPE_SPACER
         else -> throw IllegalArgumentException("Unknown item type at position $position")
     }
+
+    fun updateTaskDisplay() {
+        val currentTime = Calendar.getInstance().time
+        items.forEach { item ->
+            if (item is Task) {
+                // Check if the current time is after the task's due date and the task is not completed
+                item.isCurrently = currentTime.after(item.dueDate) && !item.isCompleted
+            }
+        }
+        notifyDataSetChanged() // Notify the adapter to rebind the data to reflect any changes
+    }
 }
+
 
 
 
